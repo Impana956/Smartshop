@@ -1,0 +1,40 @@
+{
+  "name": "SmartShop – E-commerce Recommendation Engine",
+  "short_name": "SmartShop",
+  "description": "AI-powered personalized shopping with flash sales, smart recommendations, and full checkout.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8f2",
+  "theme_color": "#ff6600",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/fluency/192/shopping-bag.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://img.icons8.com/fluency/512/shopping-bag.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "My Wishlist",
+      "short_name": "Wishlist",
+      "url": "/?tab=wishlist",
+      "icons": [{ "src": "https://img.icons8.com/fluency/96/like.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "url": "/?tab=orders",
+      "icons": [{ "src": "https://img.icons8.com/fluency/96/package.png", "sizes": "96x96" }]
+    }
+  ]
+}
