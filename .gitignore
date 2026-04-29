@@ -16,3 +16,6 @@ frontend/dist/
 # Environment
 .env
 *.env
+
+# Large data files
+data/combined_products.csv
