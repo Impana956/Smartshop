@@ -93,6 +93,12 @@ This project includes a `render.yaml` for one-click deployment to [Render](https
 | `GMAIL_ADDRESS` | Sender email for notifications |
 | `GMAIL_APP_PASSWORD` | Gmail App Password |
 
+## Live Demo
+
+**[https://smartshop-nhfk.onrender.com](https://smartshop-nhfk.onrender.com)**
+
+> Note: Hosted on Render free tier — first load may take ~50 seconds to wake up.
+
 ## License
 
 MIT
