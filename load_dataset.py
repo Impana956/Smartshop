@@ -22,7 +22,6 @@ Interaction derivation logic:
   - rating >= 4.0 -> wishlist
   - rating >= 4.8 -> purchase
 """
-DDDDDDDDDDDDD
 import csv
 import os
 import re
