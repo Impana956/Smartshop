@@ -21,10 +21,11 @@ Routes:
   GET      /user_purchases/<u>    -> Purchased products (JSON)
 """
 
-import smtplib
+import json
+import os
 import threading
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import urllib.request
+import urllib.error
 from functools import wraps
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -36,11 +37,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db, get_db
 
 # ── Email Configuration ────────────────────────────────────────────────────
-# Replace these with your Gmail address and App Password.
-# Get an App Password at: myaccount.google.com → Security → App passwords
-EMAIL_SENDER   = 'impanasubbanna2004@gmail.com'
-EMAIL_PASSWORD = 'mlbhhmlxemvtdczi'
-EMAIL_ENABLED  = True
+# Set RESEND_API_KEY as an environment variable in your Render dashboard.
+# Sign up free at https://resend.com to get an API key.
+# For local dev you can also set it in your shell: set RESEND_API_KEY=re_...
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+EMAIL_FROM     = os.environ.get('EMAIL_FROM', 'SmartShop <onboarding@resend.dev>')
+EMAIL_ENABLED  = bool(RESEND_API_KEY)
 # ──────────────────────────────────────────────────────────────────────────
 
 # ── Dummy Payment (simulated) ────────────────────────────────────────────
@@ -61,6 +63,27 @@ app.secret_key = 'smartshop_ecommerce_secret_2024'
 init_db()
 
 # ── Email helper ────────────────────────────────────────────────────────────
+def _resend_email(to_email, subject, html):
+    """Send an email via Resend HTTP API (works on Render free tier)."""
+    payload = json.dumps({
+        'from':    EMAIL_FROM,
+        'to':      [to_email],
+        'subject': subject,
+        'html':    html,
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.resend.com/emails',
+        data=payload,
+        headers={
+            'Authorization': f'Bearer {RESEND_API_KEY}',
+            'Content-Type':  'application/json',
+        },
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return resp.read()
+
+
 def _send_cart_email(to_email, user_name, product_name, product_price, product_image):
     """Send an HTML cart-confirmation email. Runs in a background thread."""
     if not EMAIL_ENABLED:
@@ -94,15 +117,7 @@ def _send_cart_email(to_email, user_name, product_name, product_price, product_i
           </div>
         </div>
         """
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f'🛒 Cart Update – {product_name[:50]}'
-        msg['From']    = f'SmartShop <{EMAIL_SENDER}>'
-        msg['To']      = to_email
-        msg.attach(MIMEText(html, 'html'))
-
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_SENDER, to_email, msg.as_string())
+        _resend_email(to_email, f'🛒 Cart Update – {product_name[:50]}', html)
         print(f'[Email] Cart email sent to {to_email}')
     except Exception as exc:
         print(f'[Email] Failed to send to {to_email}: {exc}')
@@ -165,14 +180,7 @@ def _send_order_email(to_email, user_name, order_id, items, total, discount, met
           </div>
         </div>
         """
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f'✅ Order #{order_id} Confirmed – SmartShop'
-        msg['From']    = f'SmartShop <{EMAIL_SENDER}>'
-        msg['To']      = to_email
-        msg.attach(MIMEText(html, 'html'))
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_SENDER, to_email, msg.as_string())
+        _resend_email(to_email, f'✅ Order #{order_id} Confirmed – SmartShop', html)
         print(f'[Email] Order confirmation sent to {to_email}')
     except Exception as exc:
         print(f'[Email] Order email failed: {exc}')
