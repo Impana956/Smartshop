@@ -61,6 +61,8 @@ from recommender import (get_recommendations, get_trending,
 app = Flask(__name__)
 app.secret_key = 'smartshop_ecommerce_secret_2024'
 
+_reset_tokens = {}   # token -> {user_id, email, expires}
+
 init_db()
 
 # ── Email helper ────────────────────────────────────────────────────────────
@@ -310,9 +312,77 @@ def api_logout():
     return jsonify({'ok': True})
 
 
-# 
-# PRODUCT APIs
-# 
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    data  = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip().lower()
+    if not email or '@' not in email:
+        return jsonify({'ok': False, 'error': 'Enter a valid email address.'})
+    db  = get_db()
+    row = db.execute('SELECT user_id, name FROM users WHERE email = ?', (email,)).fetchone()
+    db.close()
+    # Always return ok=True to avoid revealing whether email exists
+    if row and EMAIL_ENABLED:
+        import secrets as _sec
+        token     = _sec.token_urlsafe(32)
+        reset_url = f'https://smartshop-nhfk.onrender.com/?reset_token={token}'
+        # Store token in memory (simple; fine for free-tier single-worker)
+        _reset_tokens[token] = {'user_id': row['user_id'], 'email': email,
+                                'expires': datetime.now().timestamp() + 3600}
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;
+                    background:#faf9ff;border-radius:12px;overflow:hidden;
+                    border:1px solid #ede9fe;">
+          <div style="background:#6c63ff;padding:24px 28px;">
+            <h2 style="color:#fff;margin:0;font-size:1.2rem;">🔑 Reset Your Password</h2>
+          </div>
+          <div style="padding:28px;">
+            <p style="color:#374151;margin:0 0 16px;">Hi <strong>{row['name']}</strong>,</p>
+            <p style="color:#6b7280;margin:0 0 20px;">
+              We received a request to reset your SmartShop password.
+              Click the button below — the link expires in 1 hour.
+            </p>
+            <a href="{reset_url}"
+               style="display:inline-block;background:#6c63ff;color:#fff;
+                      padding:12px 28px;border-radius:8px;text-decoration:none;
+                      font-weight:700;font-size:0.95rem;">
+              Reset Password
+            </a>
+            <p style="font-size:0.75rem;color:#9ca3af;margin:20px 0 0;">
+              If you didn't request this, ignore this email.
+            </p>
+          </div>
+        </div>
+        """
+        threading.Thread(
+            target=_resend_email,
+            args=(email, '🔑 Reset your SmartShop password', html),
+            daemon=True
+        ).start()
+    return jsonify({'ok': True, 'message': 'If that email exists, a reset link has been sent.'})
+
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    data     = request.get_json(silent=True) or {}
+    token    = data.get('token', '').strip()
+    password = data.get('password', '')
+    if not token or not password or len(password) < 6:
+        return jsonify({'ok': False, 'error': 'Invalid request.'})
+    info = _reset_tokens.get(token)
+    if not info or info['expires'] < datetime.now().timestamp():
+        _reset_tokens.pop(token, None)
+        return jsonify({'ok': False, 'error': 'Reset link has expired. Please request a new one.'})
+    db = get_db()
+    db.execute('UPDATE users SET password_hash = ? WHERE user_id = ?',
+               (generate_password_hash(password), info['user_id']))
+    db.commit()
+    db.close()
+    _reset_tokens.pop(token, None)
+    return jsonify({'ok': True, 'message': 'Password updated! You can now sign in.'})
+
+
+
 
 @app.route('/products')
 @login_required

@@ -55,12 +55,66 @@ export default function LandingPage({ onLogin }) {
   const [showLoginPw,   setShowLoginPw]   = useState(false);
   const [showRegPw,     setShowRegPw]     = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [forgotOpen,    setForgotOpen]    = useState(false);
+  const [forgotEmail,   setForgotEmail]   = useState('');
+  const [forgotMsg,     setForgotMsg]     = useState('');
+  const [forgotErr,     setForgotErr]     = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  // reset-password flow (token from URL)
+  const urlParams   = new URLSearchParams(window.location.search);
+  const resetToken  = urlParams.get('reset_token') || '';
+  const [resetOpen,     setResetOpen]     = useState(!!resetToken);
+  const [resetPw,       setResetPw]       = useState('');
+  const [resetMsg,      setResetMsg]      = useState('');
+  const [resetErr,      setResetErr]      = useState('');
+  const [resetLoading,  setResetLoading]  = useState(false);
 
   const [catRef,  catVisible]  = useReveal();
   const [featRef, featVisible] = useReveal();
   const [howRef,  howVisible]  = useReveal();
 
   const switchTab = (tab) => { setActiveTab(tab); setError(''); setSuccess(''); setFieldErrors({}); };
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    setForgotErr(''); setForgotMsg('');
+    setForgotLoading(true);
+    try {
+      const res  = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await res.json();
+      if (data.ok) setForgotMsg(data.message);
+      else setForgotErr(data.error);
+    } catch {
+      setForgotErr('Network error. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetErr(''); setResetMsg('');
+    if (resetPw.length < 6) { setResetErr('Password must be at least 6 characters.'); return; }
+    setResetLoading(true);
+    try {
+      const res  = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, password: resetPw }),
+      });
+      const data = await res.json();
+      if (data.ok) { setResetMsg(data.message); setTimeout(() => { setResetOpen(false); switchTab('login'); }, 2000); }
+      else setResetErr(data.error);
+    } catch {
+      setResetErr('Network error. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -199,6 +253,13 @@ export default function LandingPage({ onLogin }) {
                 <button type="submit" className="lp-form-btn" disabled={loading}>
                   {loading ? 'Signing in…' : 'Sign In →'}
                 </button>
+                <p className="lp-auth-switch" style={{textAlign:'center',marginTop:'0.5rem'}}>
+                  <button type="button" className="lp-auth-link"
+                    style={{color:'#6c63ff',background:'none',border:'none',cursor:'pointer',fontSize:'0.85rem'}}
+                    onClick={() => { setForgotEmail(loginForm.email); setForgotMsg(''); setForgotErr(''); setForgotOpen(true); }}>
+                    Forgot password?
+                  </button>
+                </p>
                 <p className="lp-auth-switch">
                   Don't have an account?{' '}
                   <button type="button" className="lp-auth-link" onClick={() => switchTab('register')}>Register free</button>
@@ -356,6 +417,63 @@ export default function LandingPage({ onLogin }) {
       <footer className="lp-footer">
         <p>© 2026 E-commerce Recommendation Engine · AI-Powered Shopping Platform</p>
       </footer>
+
+      {/* ── Forgot Password Modal ── */}
+      {forgotOpen && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}}>
+          <div style={{background:'#fff',borderRadius:14,padding:'2rem',maxWidth:400,width:'100%',boxShadow:'0 8px 40px rgba(108,99,255,0.18)'}}>
+            <h3 style={{margin:'0 0 0.5rem',color:'#111827',fontSize:'1.1rem'}}>🔑 Forgot Password</h3>
+            <p style={{fontSize:'0.85rem',color:'#6b7280',margin:'0 0 1.2rem'}}>Enter your email and we'll send a reset link.</p>
+            {forgotMsg && <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,padding:'0.6rem 0.9rem',marginBottom:'1rem',color:'#166534',fontSize:'0.85rem'}}>{forgotMsg}</div>}
+            {forgotErr && <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:8,padding:'0.6rem 0.9rem',marginBottom:'1rem',color:'#dc2626',fontSize:'0.85rem'}}>{forgotErr}</div>}
+            {!forgotMsg && (
+              <form onSubmit={handleForgot}>
+                <input type="email" required placeholder="you@example.com"
+                  value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                  style={{width:'100%',padding:'0.6rem 0.75rem',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:'0.9rem',boxSizing:'border-box',marginBottom:'1rem'}} />
+                <div style={{display:'flex',gap:'0.75rem'}}>
+                  <button type="submit" disabled={forgotLoading}
+                    style={{flex:1,background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
+                    {forgotLoading ? 'Sending…' : 'Send Reset Link'}
+                  </button>
+                  <button type="button" onClick={() => setForgotOpen(false)}
+                    style={{flex:1,background:'#f3f4f6',color:'#374151',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:600,cursor:'pointer',fontSize:'0.9rem'}}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+            {forgotMsg && (
+              <button onClick={() => setForgotOpen(false)}
+                style={{width:'100%',background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem',marginTop:'0.5rem'}}>
+                Close
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Reset Password Modal (opened via email link) ── */}
+      {resetOpen && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}}>
+          <div style={{background:'#fff',borderRadius:14,padding:'2rem',maxWidth:400,width:'100%',boxShadow:'0 8px 40px rgba(108,99,255,0.18)'}}>
+            <h3 style={{margin:'0 0 0.5rem',color:'#111827',fontSize:'1.1rem'}}>🔑 Set New Password</h3>
+            {resetMsg && <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,padding:'0.6rem 0.9rem',marginBottom:'1rem',color:'#166534',fontSize:'0.85rem'}}>{resetMsg}</div>}
+            {resetErr && <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:8,padding:'0.6rem 0.9rem',marginBottom:'1rem',color:'#dc2626',fontSize:'0.85rem'}}>{resetErr}</div>}
+            {!resetMsg && (
+              <form onSubmit={handleResetPassword}>
+                <input type="password" required minLength={6} placeholder="New password (min 6 chars)"
+                  value={resetPw} onChange={e => setResetPw(e.target.value)}
+                  style={{width:'100%',padding:'0.6rem 0.75rem',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:'0.9rem',boxSizing:'border-box',marginBottom:'1rem'}} />
+                <button type="submit" disabled={resetLoading}
+                  style={{width:'100%',background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
+                  {resetLoading ? 'Updating…' : 'Update Password'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
