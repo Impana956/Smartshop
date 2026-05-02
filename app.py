@@ -46,6 +46,7 @@ BREVO_SMTP_LOGIN    = os.environ.get('BREVO_SMTP_LOGIN', '')
 BREVO_SMTP_PASSWORD = os.environ.get('BREVO_SMTP_PASSWORD', '')
 EMAIL_FROM          = os.environ.get('EMAIL_FROM', 'impanasubbanna2004@gmail.com')
 EMAIL_ENABLED       = bool(BREVO_SMTP_LOGIN and BREVO_SMTP_PASSWORD)
+print(f'[Email] ENABLED={EMAIL_ENABLED} LOGIN={bool(BREVO_SMTP_LOGIN)} PWD={bool(BREVO_SMTP_PASSWORD)}')
 # ──────────────────────────────────────────────────────────────────────────
 
 # ── Dummy Payment (simulated) ────────────────────────────────────────────
