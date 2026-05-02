@@ -39,14 +39,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from database import init_db, get_db
 
-# ── Email Configuration (Brevo SMTP) ─────────────────────────────────────
-BREVO_SMTP_SERVER   = 'smtp-relay.brevo.com'
-BREVO_SMTP_PORT     = 587
-BREVO_SMTP_LOGIN    = os.environ.get('BREVO_SMTP_LOGIN', '')
-BREVO_SMTP_PASSWORD = os.environ.get('BREVO_SMTP_PASSWORD', '')
-EMAIL_FROM          = os.environ.get('EMAIL_FROM', 'impanasubbanna2004@gmail.com')
-EMAIL_ENABLED       = bool(BREVO_SMTP_LOGIN and BREVO_SMTP_PASSWORD)
-print(f'[Email] ENABLED={EMAIL_ENABLED} LOGIN={bool(BREVO_SMTP_LOGIN)} PWD={bool(BREVO_SMTP_PASSWORD)}')
+# ── Email Configuration (Brevo HTTP API) ────────────────────────────────
+BREVO_API_KEY   = os.environ.get('BREVO_API_KEY', '')
+EMAIL_FROM      = os.environ.get('EMAIL_FROM', 'impanasubbanna2004@gmail.com')
+EMAIL_ENABLED   = bool(BREVO_API_KEY)
+print(f'[Email] ENABLED={EMAIL_ENABLED} API_KEY={bool(BREVO_API_KEY)}')
 # ──────────────────────────────────────────────────────────────────────────
 
 # ── Dummy Payment (simulated) ────────────────────────────────────────────
@@ -68,16 +65,25 @@ init_db()
 
 # ── Email helper ────────────────────────────────────────────────────────────
 def _resend_email(to_email, subject, html):
-    """Send an email via Brevo SMTP relay (port 587, works on Render free tier)."""
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From']    = f'SmartShop <{EMAIL_FROM}>'
-    msg['To']      = to_email
-    msg.attach(MIMEText(html, 'html'))
-    with smtplib.SMTP(BREVO_SMTP_SERVER, BREVO_SMTP_PORT) as server:
-        server.starttls()
-        server.login(BREVO_SMTP_LOGIN, BREVO_SMTP_PASSWORD)
-        server.sendmail(EMAIL_FROM, to_email, msg.as_string())
+    """Send an email via Brevo HTTP API (HTTPS – never blocked by Render)."""
+    payload = json.dumps({
+        'sender':      {'name': 'SmartShop', 'email': EMAIL_FROM},
+        'to':          [{'email': to_email}],
+        'subject':     subject,
+        'htmlContent': html,
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.brevo.com/v3/smtp/email',
+        data=payload,
+        headers={
+            'api-key':      BREVO_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept':       'application/json',
+        },
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return resp.read()
 
 
 def _send_cart_email(to_email, user_name, product_name, product_price, product_image):
