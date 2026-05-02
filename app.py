@@ -354,8 +354,14 @@ def forgot_password():
           </div>
         </div>
         """
+        def _send_reset(to, subj, body):
+            try:
+                _resend_email(to, subj, body)
+                print(f'[Email] Reset email sent to {to}')
+            except Exception as exc:
+                print(f'[Email] Reset email failed: {exc}')
         threading.Thread(
-            target=_resend_email,
+            target=_send_reset,
             args=(email, '🔑 Reset your SmartShop password', html),
             daemon=True
         ).start()
