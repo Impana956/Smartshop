@@ -88,6 +88,15 @@ def _resend_email(to_email, subject, html):
         return resp.read()
 
 
+def _send_reset_email(to_email, subject, html):
+    """Top-level wrapper for reset email so it can be used in threads."""
+    try:
+        _resend_email(to_email, subject, html)
+        print(f'[Email] Reset email sent to {to_email}')
+    except Exception as exc:
+        print(f'[Email] Reset email failed: {exc}')
+
+
 def _send_cart_email(to_email, user_name, product_name, product_price, product_image):
     """Send an HTML cart-confirmation email. Runs in a background thread."""
     if not EMAIL_ENABLED:
@@ -345,13 +354,7 @@ def forgot_password():
             '</div></div>'
         )
         subj = 'Reset your SmartShop password'
-        def _send_reset(to, s, b):
-            try:
-                _resend_email(to, s, b)
-                print(f'[Email] Reset email sent to {to}')
-            except Exception as exc:
-                print(f'[Email] Reset email failed: {exc}')
-        threading.Thread(target=_send_reset, args=(email, subj, html), daemon=True).start()
+        threading.Thread(target=_send_reset_email, args=(email, subj, html), daemon=True).start()
     return jsonify({'ok': True, 'message': 'If that email exists, a reset link has been sent.'})
 
 
