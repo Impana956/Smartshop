@@ -74,6 +74,7 @@
 [data-theme="dark"] .btn             { color: var(--text); }
 [data-theme="dark"] .btn-wishlist    { background: #252540; border-color: var(--border); color: var(--text); }
 [data-theme="dark"] .modal-overlay   { background: rgba(0,0,0,0.75); }
+.modal-box                           { background: #ffffff; color: var(--text); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,0.22); }
 [data-theme="dark"] .modal-box       { background: #1c1c2e; color: var(--text); }
 [data-theme="dark"] .filter-sidebar  { background: var(--card-bg); border-color: var(--border); }
 [data-theme="dark"] .filter-sidebar-cat { color: var(--text); }
