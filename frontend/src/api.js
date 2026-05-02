@@ -48,6 +48,11 @@ export async function getTopRated() {
 
 export async function searchProducts(query) {
   const res = await fetch('/search?q=' + encodeURIComponent(query));
+  if (res.status === 401) {
+    window.location.reload();
+    throw new Error('Session expired');
+  }
+  if (!res.ok) throw new Error('Search failed');
   return res.json();
 }
 

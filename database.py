@@ -250,8 +250,11 @@ def init_db():
     user_count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
     if user_count == 0:
         # Load real Amazon product & review data from CSV files
-        from load_dataset import load_csv_to_db
+        from load_dataset import load_csv_to_db, load_seed_to_db
         load_csv_to_db(conn)
+        # Also load the diverse product seed (covers categories like pillows, clothing, etc.)
+        # This is small enough to be committed to git and ensures Render has full product coverage.
+        load_seed_to_db(conn)
 
     conn.close()
 

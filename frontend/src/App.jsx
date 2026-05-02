@@ -230,6 +230,10 @@ export default function App() {
       setTrending({ data: data.trending || [], loading: false });
       setTopRated({ data: data.top_rated || [], loading: false });
       fetchSocialProof([...(data.results || []), ...(data.recommendations || [])]);
+    } catch (err) {
+      if (err.message !== 'Session expired') {
+        showToast('Search failed. Please try again.', 'error');
+      }
     } finally {
       setSearchLoading(false);
     }

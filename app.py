@@ -180,10 +180,19 @@ def _send_order_email(to_email, user_name, order_id, items, total, discount, met
 
 #  Auth helpers 
 def login_required(f):
-    """Redirect to / if no session exists."""
+    """Return 401 JSON for API/AJAX requests; redirect to / for browser navigation."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
+            sec_fetch_mode = request.headers.get('Sec-Fetch-Mode', '')
+            accept = request.headers.get('Accept', '')
+            is_fetch = (request.is_json or
+                        request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                        request.path.startswith('/api/') or
+                        'application/json' in accept or
+                        sec_fetch_mode in ('cors', 'same-origin', 'no-cors'))
+            if is_fetch:
+                return jsonify({'error': 'Authentication required', 'redirect': '/'}), 401
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated

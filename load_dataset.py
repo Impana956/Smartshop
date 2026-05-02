@@ -189,3 +189,62 @@ def load_csv_to_db(conn):
     print('Loaded ' + str(prod_count) + ' products, ' +
           str(len(seen_users)) + ' users, and ' +
           str(review_count) + ' review interactions from Kaggle Amazon CSV.')
+
+
+SEED_CSV = os.path.join(DATA_DIR, 'products_seed.csv')
+
+
+def load_seed_to_db(conn):
+    """
+    Load data/products_seed.csv (combined_products.csv format) into the products table.
+    Used as a supplementary dataset on deployments where combined_products.csv is unavailable.
+    CSV columns: name, main_category, sub_category, image, link, ratings, no_of_ratings,
+                 discount_price, actual_price
+    """
+    if not os.path.exists(SEED_CSV):
+        return 0
+
+    cursor = conn.cursor()
+    # Find current max product_id to avoid collisions
+    row = cursor.execute('SELECT MAX(product_id) FROM products').fetchone()
+    seq = (row[0] or 0) + 1
+    count = 0
+
+    with open(SEED_CSV, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            name  = row.get('name', '').strip()
+            if not name:
+                continue
+            category = (row.get('sub_category') or row.get('main_category') or 'General').strip()
+            price    = _parse_price(row.get('discount_price') or row.get('actual_price') or '0')
+            actual   = _parse_price(row.get('actual_price', '0'))
+            if price == 0.0:
+                price = actual
+            if price == 0.0:
+                continue
+            image   = row.get('image', '').strip()
+            try:
+                rating = float(row.get('ratings', '0') or '0')
+            except ValueError:
+                rating = 0.0
+
+            cursor.execute(
+                'INSERT OR IGNORE INTO products (product_id, name, category, price, image)'
+                ' VALUES (?, ?, ?, ?, ?)',
+                (seq, name, category, price, image)
+            )
+            # Seed a synthetic interaction so recommender has signal
+            if rating >= 4.0:
+                cursor.execute(
+                    'INSERT INTO interactions (user_id, product_id, action, rating, timestamp)'
+                    ' VALUES (1, ?, ?, ?, ?)',
+                    (seq, 'rate', rating, _random_ts(60))
+                )
+            seq += 1
+            count += 1
+
+    conn.commit()
+    print(f'Loaded {count} additional products from products_seed.csv.')
+    return count
+
