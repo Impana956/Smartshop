@@ -324,47 +324,34 @@ def forgot_password():
     # Always return ok=True to avoid revealing whether email exists
     if row and EMAIL_ENABLED:
         import secrets as _sec
-        token     = _sec.token_urlsafe(32)
-        reset_url = f'https://smartshop-nhfk.onrender.com/?reset_token={token}'
-        # Store token in memory (simple; fine for free-tier single-worker)
-        _reset_tokens[token] = {'user_id': row['user_id'], 'email': email,
+        token      = _sec.token_urlsafe(32)
+        reset_url  = f'https://smartshop-nhfk.onrender.com/?reset_token={token}'
+        user_name  = row['name']
+        user_id    = row['user_id']
+        _reset_tokens[token] = {'user_id': user_id, 'email': email,
                                 'expires': datetime.now().timestamp() + 3600}
-        html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;
-                    background:#faf9ff;border-radius:12px;overflow:hidden;
-                    border:1px solid #ede9fe;">
-          <div style="background:#6c63ff;padding:24px 28px;">
-            <h2 style="color:#fff;margin:0;font-size:1.2rem;">🔑 Reset Your Password</h2>
-          </div>
-          <div style="padding:28px;">
-            <p style="color:#374151;margin:0 0 16px;">Hi <strong>{row['name']}</strong>,</p>
-            <p style="color:#6b7280;margin:0 0 20px;">
-              We received a request to reset your SmartShop password.
-              Click the button below — the link expires in 1 hour.
-            </p>
-            <a href="{reset_url}"
-               style="display:inline-block;background:#6c63ff;color:#fff;
-                      padding:12px 28px;border-radius:8px;text-decoration:none;
-                      font-weight:700;font-size:0.95rem;">
-              Reset Password
-            </a>
-            <p style="font-size:0.75rem;color:#9ca3af;margin:20px 0 0;">
-              If you didn't request this, ignore this email.
-            </p>
-          </div>
-        </div>
-        """
-        def _send_reset(to, subj, body):
+        html = (
+            '<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;'
+            'background:#faf9ff;border-radius:12px;overflow:hidden;border:1px solid #ede9fe;">'
+            '<div style="background:#6c63ff;padding:24px 28px;">'
+            '<h2 style="color:#fff;margin:0;font-size:1.2rem;">&#128273; Reset Your Password</h2>'
+            '</div><div style="padding:28px;">'
+            f'<p style="color:#374151;margin:0 0 16px;">Hi <strong>{user_name}</strong>,</p>'
+            '<p style="color:#6b7280;margin:0 0 20px;">Click the button below to reset your SmartShop password. The link expires in 1 hour.</p>'
+            f'<a href="{reset_url}" style="display:inline-block;background:#6c63ff;color:#fff;'
+            'padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;">'
+            'Reset Password</a>'
+            '<p style="font-size:0.75rem;color:#9ca3af;margin:20px 0 0;">If you did not request this, ignore this email.</p>'
+            '</div></div>'
+        )
+        subj = 'Reset your SmartShop password'
+        def _send_reset(to, s, b):
             try:
-                _resend_email(to, subj, body)
+                _resend_email(to, s, b)
                 print(f'[Email] Reset email sent to {to}')
             except Exception as exc:
                 print(f'[Email] Reset email failed: {exc}')
-        threading.Thread(
-            target=_send_reset,
-            args=(email, '🔑 Reset your SmartShop password', html),
-            daemon=True
-        ).start()
+        threading.Thread(target=_send_reset, args=(email, subj, html), daemon=True).start()
     return jsonify({'ok': True, 'message': 'If that email exists, a reset link has been sent.'})
 
 
