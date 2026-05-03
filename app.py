@@ -304,13 +304,15 @@ def me():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     db  = get_db()
-    row = db.execute('SELECT loyalty_points FROM users WHERE user_id=?',
+    row = db.execute('SELECT loyalty_points, email FROM users WHERE user_id=?',
                      (session['user_id'],)).fetchone()
     db.close()
-    pts = row['loyalty_points'] if row and row['loyalty_points'] else 0
+    pts   = row['loyalty_points'] if row and row['loyalty_points'] else 0
+    email = row['email'] if row else ''
     return jsonify({
         'user_id':        session['user_id'],
         'user_name':      session['user_name'],
+        'email':          email,
         'loyalty_points': pts,
     })
 

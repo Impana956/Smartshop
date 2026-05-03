@@ -8,6 +8,7 @@ const TABS = [
   { id: 'wishlist', icon: '❤️', label: 'Wishlist'    },
   { id: 'cart',     icon: '🛒', label: 'Cart'        },
   { id: 'orders',   icon: '📦', label: 'Orders'      },
+  { id: 'profile',  icon: '👤', label: 'Profile'     },
 ];
 
 const HISTORY_KEY = 'ecommerce_search_history';
@@ -30,7 +31,7 @@ function applyTheme(dark) {
   localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
 }
 
-export default function Navbar({ userName, onSearch, onLogout, activeTab, onTabChange, wishlistCount, cartCount, ordersCount }) {
+export default function Navbar({ userName, onSearch, onLogout, activeTab, onTabChange, wishlistCount, cartCount, ordersCount, onChangePw }) {
   const [history,      setHistory]      = useState(getHistory);
   const [showHistory,  setShowHistory]  = useState(false);
   const [suggestions,  setSuggestions]  = useState([]);
@@ -204,6 +205,11 @@ export default function Navbar({ userName, onSearch, onLogout, activeTab, onTabC
             <span className="user-avatar">{userName ? userName[0].toUpperCase() : '?'}</span>
             <span className="user-name-text">{userName}</span>
           </span>
+          <button
+            onClick={onChangePw}
+            title="Change Password"
+            style={{ background:'none', border:'1.5px solid #6c63ff', color:'#6c63ff', borderRadius:8, padding:'0.3rem 0.65rem', fontSize:'0.8rem', fontWeight:600, cursor:'pointer', flexShrink:0 }}
+          >🔑</button>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </div>
