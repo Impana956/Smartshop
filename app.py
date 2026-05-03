@@ -378,6 +378,26 @@ def reset_password():
     return jsonify({'ok': True, 'message': 'Password updated! You can now sign in.'})
 
 
+@app.route('/api/reset-password-direct', methods=['POST'])
+def reset_password_direct():
+    """Reset password directly by email — no email link required."""
+    data     = request.get_json(silent=True) or {}
+    email    = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    if not email or '@' not in email:
+        return jsonify({'ok': False, 'error': 'Enter a valid email address.'})
+    if not password or len(password) < 6:
+        return jsonify({'ok': False, 'error': 'Password must be at least 6 characters.'})
+    db  = get_db()
+    row = db.execute('SELECT user_id FROM users WHERE email = ?', (email,)).fetchone()
+    if not row:
+        db.close()
+        return jsonify({'ok': False, 'error': 'No account found with that email address.'})
+    db.execute('UPDATE users SET password_hash = ? WHERE user_id = ?',
+               (generate_password_hash(password), row['user_id']))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'message': 'Password reset! You can now sign in with your new password.'})
 
 
 @app.route('/products')

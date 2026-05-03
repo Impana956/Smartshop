@@ -55,11 +55,16 @@ export default function LandingPage({ onLogin }) {
   const [showLoginPw,   setShowLoginPw]   = useState(false);
   const [showRegPw,     setShowRegPw]     = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [forgotOpen,    setForgotOpen]    = useState(false);
-  const [forgotEmail,   setForgotEmail]   = useState('');
-  const [forgotMsg,     setForgotMsg]     = useState('');
-  const [forgotErr,     setForgotErr]     = useState('');
-  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotOpen,       setForgotOpen]       = useState(false);
+  const [forgotStep,       setForgotStep]       = useState(1); // 1=email, 2=new password
+  const [forgotEmail,      setForgotEmail]      = useState('');
+  const [forgotNewPw,      setForgotNewPw]      = useState('');
+  const [forgotConfirmPw,  setForgotConfirmPw]  = useState('');
+  const [forgotMsg,        setForgotMsg]        = useState('');
+  const [forgotErr,        setForgotErr]        = useState('');
+  const [forgotLoading,    setForgotLoading]    = useState(false);
+  const [showForgotNewPw,  setShowForgotNewPw]  = useState(false);
+  const [showForgotConfirm,setShowForgotConfirm]= useState(false);
   // reset-password flow (token from URL)
   const urlParams   = new URLSearchParams(window.location.search);
   const resetToken  = urlParams.get('reset_token') || '';
@@ -75,19 +80,37 @@ export default function LandingPage({ onLogin }) {
 
   const switchTab = (tab) => { setActiveTab(tab); setError(''); setSuccess(''); setFieldErrors({}); };
 
-  const handleForgot = async (e) => {
+  const openForgot = (prefill = '') => {
+    setForgotStep(1); setForgotEmail(prefill); setForgotNewPw(''); setForgotConfirmPw('');
+    setForgotMsg(''); setForgotErr(''); setForgotOpen(true);
+  };
+
+  const handleForgotStep1 = (e) => {
+    e.preventDefault();
+    if (!forgotEmail.includes('@')) { setForgotErr('Enter a valid email address.'); return; }
+    setForgotErr('');
+    setForgotStep(2);
+  };
+
+  const handleForgotStep2 = async (e) => {
     e.preventDefault();
     setForgotErr(''); setForgotMsg('');
+    if (forgotNewPw.length < 6) { setForgotErr('Password must be at least 6 characters.'); return; }
+    if (forgotNewPw !== forgotConfirmPw) { setForgotErr('Passwords do not match.'); return; }
     setForgotLoading(true);
     try {
-      const res  = await fetch('/api/forgot-password', {
+      const res  = await fetch('/api/reset-password-direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail }),
+        body: JSON.stringify({ email: forgotEmail, password: forgotNewPw }),
       });
       const data = await res.json();
-      if (data.ok) setForgotMsg(data.message);
-      else setForgotErr(data.error);
+      if (data.ok) {
+        setForgotMsg(data.message);
+        setTimeout(() => { setForgotOpen(false); }, 2000);
+      } else {
+        setForgotErr(data.error);
+      }
     } catch {
       setForgotErr('Network error. Please try again.');
     } finally {
@@ -256,7 +279,7 @@ export default function LandingPage({ onLogin }) {
                 <p className="lp-auth-switch" style={{textAlign:'center',marginTop:'0.5rem'}}>
                   <button type="button" className="lp-auth-link"
                     style={{color:'#6c63ff',background:'none',border:'none',cursor:'pointer',fontSize:'0.85rem'}}
-                    onClick={() => { setForgotEmail(loginForm.email); setForgotMsg(''); setForgotErr(''); setForgotOpen(true); }}>
+                    onClick={() => openForgot(loginForm.email)}>
                     Forgot password?
                   </button>
                 </p>
@@ -418,23 +441,35 @@ export default function LandingPage({ onLogin }) {
         <p>© 2026 E-commerce Recommendation Engine · AI-Powered Shopping Platform</p>
       </footer>
 
-      {/* ── Forgot Password Modal ── */}
+      {/* ── Forgot Password Modal (2-step, no email required) ── */}
       {forgotOpen && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}}>
           <div style={{background:'#fff',borderRadius:14,padding:'2rem',maxWidth:400,width:'100%',boxShadow:'0 8px 40px rgba(108,99,255,0.18)'}}>
-            <h3 style={{margin:'0 0 0.5rem',color:'#111827',fontSize:'1.1rem'}}>🔑 Forgot Password</h3>
-            <p style={{fontSize:'0.85rem',color:'#6b7280',margin:'0 0 1.2rem'}}>Enter your email and we'll send a reset link.</p>
+
+            {/* header + step indicator */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.25rem'}}>
+              <h3 style={{margin:0,color:'#111827',fontSize:'1.1rem'}}>🔑 Reset Password</h3>
+              <span style={{fontSize:'0.75rem',color:'#9ca3af',fontWeight:600}}>Step {forgotStep} of 2</span>
+            </div>
+            <div style={{display:'flex',gap:4,marginBottom:'1.2rem'}}>
+              <div style={{flex:1,height:3,borderRadius:4,background:'#6c63ff'}} />
+              <div style={{flex:1,height:3,borderRadius:4,background: forgotStep === 2 ? '#6c63ff' : '#e5e7eb'}} />
+            </div>
+
             {forgotMsg && <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,padding:'0.6rem 0.9rem',marginBottom:'1rem',color:'#166534',fontSize:'0.85rem'}}>{forgotMsg}</div>}
             {forgotErr && <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:8,padding:'0.6rem 0.9rem',marginBottom:'1rem',color:'#dc2626',fontSize:'0.85rem'}}>{forgotErr}</div>}
-            {!forgotMsg && (
-              <form onSubmit={handleForgot}>
-                <input type="email" required placeholder="you@example.com"
-                  value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
-                  style={{width:'100%',padding:'0.6rem 0.75rem',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:'0.9rem',boxSizing:'border-box',marginBottom:'1rem'}} />
+
+            {!forgotMsg && forgotStep === 1 && (
+              <form onSubmit={handleForgotStep1}>
+                <p style={{fontSize:'0.85rem',color:'#6b7280',margin:'0 0 1rem'}}>Enter the email address for your account.</p>
+                <label style={{display:'block',fontSize:'0.82rem',fontWeight:600,color:'#374151',marginBottom:'0.3rem'}}>Email Address</label>
+                <input type="email" required placeholder="you@example.com" autoComplete="email"
+                  value={forgotEmail} onChange={e => { setForgotEmail(e.target.value); setForgotErr(''); }}
+                  style={{width:'100%',padding:'0.6rem 0.75rem',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:'0.9rem',boxSizing:'border-box',marginBottom:'1.1rem'}} />
                 <div style={{display:'flex',gap:'0.75rem'}}>
-                  <button type="submit" disabled={forgotLoading}
+                  <button type="submit"
                     style={{flex:1,background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
-                    {forgotLoading ? 'Sending…' : 'Send Reset Link'}
+                    Continue →
                   </button>
                   <button type="button" onClick={() => setForgotOpen(false)}
                     style={{flex:1,background:'#f3f4f6',color:'#374151',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:600,cursor:'pointer',fontSize:'0.9rem'}}>
@@ -443,10 +478,56 @@ export default function LandingPage({ onLogin }) {
                 </div>
               </form>
             )}
+
+            {!forgotMsg && forgotStep === 2 && (
+              <form onSubmit={handleForgotStep2}>
+                <p style={{fontSize:'0.85rem',color:'#6b7280',margin:'0 0 1rem'}}>
+                  Set a new password for <strong>{forgotEmail}</strong>.
+                </p>
+                <div style={{marginBottom:'0.85rem'}}>
+                  <label style={{display:'block',fontSize:'0.82rem',fontWeight:600,color:'#374151',marginBottom:'0.3rem'}}>New Password</label>
+                  <div style={{display:'flex',alignItems:'center',border:'1.5px solid #e5e7eb',borderRadius:8,overflow:'hidden'}}>
+                    <input type={showForgotNewPw ? 'text' : 'password'} required minLength={6} placeholder="Min 6 characters" autoComplete="new-password"
+                      value={forgotNewPw} onChange={e => { setForgotNewPw(e.target.value); setForgotErr(''); }}
+                      style={{flex:1,padding:'0.6rem 0.75rem',border:'none',outline:'none',fontSize:'0.9rem',background:'transparent'}} />
+                    <button type="button" onClick={() => setShowForgotNewPw(v => !v)}
+                      style={{padding:'0 0.65rem',background:'none',border:'none',cursor:'pointer',fontSize:'1rem'}}>
+                      {showForgotNewPw ? '🙈' : '👁️'}
+                    </button>
+                  </div>
+                </div>
+                <div style={{marginBottom:'1.1rem'}}>
+                  <label style={{display:'block',fontSize:'0.82rem',fontWeight:600,color:'#374151',marginBottom:'0.3rem'}}>Confirm New Password</label>
+                  <div style={{display:'flex',alignItems:'center',border:`1.5px solid ${forgotConfirmPw && forgotConfirmPw === forgotNewPw ? '#22c55e' : '#e5e7eb'}`,borderRadius:8,overflow:'hidden'}}>
+                    <input type={showForgotConfirm ? 'text' : 'password'} required autoComplete="new-password" placeholder="Re-enter new password"
+                      value={forgotConfirmPw} onChange={e => { setForgotConfirmPw(e.target.value); setForgotErr(''); }}
+                      style={{flex:1,padding:'0.6rem 0.75rem',border:'none',outline:'none',fontSize:'0.9rem',background:'transparent'}} />
+                    <button type="button" onClick={() => setShowForgotConfirm(v => !v)}
+                      style={{padding:'0 0.65rem',background:'none',border:'none',cursor:'pointer',fontSize:'1rem'}}>
+                      {showForgotConfirm ? '🙈' : '👁️'}
+                    </button>
+                  </div>
+                  {forgotConfirmPw && forgotConfirmPw === forgotNewPw && (
+                    <span style={{fontSize:'0.78rem',color:'#22c55e',marginTop:'0.2rem',display:'block'}}>✓ Passwords match</span>
+                  )}
+                </div>
+                <div style={{display:'flex',gap:'0.75rem'}}>
+                  <button type="submit" disabled={forgotLoading}
+                    style={{flex:1,background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
+                    {forgotLoading ? 'Saving…' : 'Reset Password'}
+                  </button>
+                  <button type="button" onClick={() => { setForgotStep(1); setForgotErr(''); }}
+                    style={{flex:1,background:'#f3f4f6',color:'#374151',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:600,cursor:'pointer',fontSize:'0.9rem'}}>
+                    ← Back
+                  </button>
+                </div>
+              </form>
+            )}
+
             {forgotMsg && (
               <button onClick={() => setForgotOpen(false)}
                 style={{width:'100%',background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem',marginTop:'0.5rem'}}>
-                Close
+                Back to Sign In
               </button>
             )}
           </div>
