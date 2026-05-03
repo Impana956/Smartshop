@@ -471,6 +471,18 @@ export default function App() {
             {activeTab === 'orders' && (
               <OrderHistory orders={orders} loading={ordersLoading} onRefresh={loadOrders} showToast={showToast} />
             )}
+            {activeTab === 'profile' && (
+              <ProfilePage
+                user={user}
+                orders={orders}
+                ordersLoading={ordersLoading}
+                onRefreshOrders={loadOrders}
+                wishlist={wishlist.data}
+                purchases={cart.data}
+                loyaltyPoints={loyaltyPoints}
+                showToast={showToast}
+              />
+            )}
           </>
         ) : activeTab === 'home' ? (
           <div className="home-layout">

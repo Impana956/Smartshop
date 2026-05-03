@@ -8,7 +8,6 @@ const TABS = [
   { id: 'wishlist', icon: '❤️', label: 'Wishlist'    },
   { id: 'cart',     icon: '🛒', label: 'Cart'        },
   { id: 'orders',   icon: '📦', label: 'Orders'      },
-  { id: 'profile',  icon: '👤', label: 'Profile'     },
 ];
 
 const HISTORY_KEY = 'ecommerce_search_history';
@@ -201,7 +200,12 @@ export default function Navbar({ userName, onSearch, onLogout, activeTab, onTabC
             {darkMode ? '☀️' : '🌙'}
           </button>
 
-          <span className="user-greeting">
+          <span
+            className="user-greeting"
+            onClick={() => onTabChange('profile')}
+            title="View Profile"
+            style={{ cursor: 'pointer' }}
+          >
             <span className="user-avatar">{userName ? userName[0].toUpperCase() : '?'}</span>
             <span className="user-name-text">{userName}</span>
           </span>
