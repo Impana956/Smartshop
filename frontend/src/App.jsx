@@ -14,86 +14,6 @@ import OrderHistory from './components/OrderHistory';
 import ProfilePage from './components/ProfilePage';
 import * as api from './api';
 
-/* ── Inline change-password modal ─────────────────────────────────────── */
-function ChangePwModal({ onClose, showToast }) {
-  const [cur, setCur]         = useState('');
-  const [nw,  setNw]          = useState('');
-  const [cnf, setCnf]         = useState('');
-  const [err, setErr]         = useState('');
-  const [msg, setMsg]         = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showCur, setShowCur] = useState(false);
-  const [showNw,  setShowNw]  = useState(false);
-  const [showCnf, setShowCnf] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErr('');
-    if (nw.length < 6) { setErr('New password must be at least 6 characters.'); return; }
-    if (nw !== cnf)    { setErr('New passwords do not match.'); return; }
-    setLoading(true);
-    try {
-      const res  = await fetch('/api/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current_password: cur, new_password: nw }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        showToast('Password changed successfully!', 'success');
-        onClose();
-      } else {
-        setErr(data.error);
-      }
-    } catch {
-      setErr('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fieldStyle = { flex: 1, padding: '0.6rem 0.75rem', border: 'none', outline: 'none', fontSize: '0.9rem', background: 'transparent', color: 'var(--text,#111827)' };
-  const wrapStyle  = (match) => ({ display: 'flex', alignItems: 'center', border: `1.5px solid ${match ? '#22c55e' : '#e5e7eb'}`, borderRadius: 8, overflow: 'hidden', marginBottom: '0.85rem' });
-  const toggleStyle = { padding: '0 0.65rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' };
-
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
-      <div style={{ background:'var(--card-bg,#fff)', borderRadius:14, padding:'2rem', maxWidth:380, width:'100%', boxShadow:'0 8px 40px rgba(108,99,255,0.18)' }}>
-        <h3 style={{ margin:'0 0 0.4rem', color:'var(--text,#111827)', fontSize:'1.1rem' }}>🔑 Change Password</h3>
-        <p style={{ fontSize:'0.82rem', color:'#6b7280', margin:'0 0 1.1rem' }}>Enter your current password and choose a new one.</p>
-        {err && <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8, padding:'0.6rem 0.9rem', marginBottom:'1rem', color:'#dc2626', fontSize:'0.85rem' }}>{err}</div>}
-        <form onSubmit={handleSubmit}>
-          <label style={{ display:'block', fontSize:'0.82rem', fontWeight:600, color:'var(--text,#374151)', marginBottom:'0.3rem' }}>Current Password</label>
-          <div style={wrapStyle(false)}>
-            <input type={showCur ? 'text' : 'password'} required placeholder="Current password" autoComplete="current-password" value={cur} onChange={e => { setCur(e.target.value); setErr(''); }} style={fieldStyle} />
-            <button type="button" onClick={() => setShowCur(v => !v)} style={toggleStyle}>{showCur ? '🙈' : '👁️'}</button>
-          </div>
-          <label style={{ display:'block', fontSize:'0.82rem', fontWeight:600, color:'var(--text,#374151)', marginBottom:'0.3rem' }}>New Password</label>
-          <div style={wrapStyle(false)}>
-            <input type={showNw ? 'text' : 'password'} required minLength={6} placeholder="Min 6 characters" autoComplete="new-password" value={nw} onChange={e => { setNw(e.target.value); setErr(''); }} style={fieldStyle} />
-            <button type="button" onClick={() => setShowNw(v => !v)} style={toggleStyle}>{showNw ? '🙈' : '👁️'}</button>
-          </div>
-          <label style={{ display:'block', fontSize:'0.82rem', fontWeight:600, color:'var(--text,#374151)', marginBottom:'0.3rem' }}>Confirm New Password</label>
-          <div style={wrapStyle(cnf && cnf === nw)}>
-            <input type={showCnf ? 'text' : 'password'} required autoComplete="new-password" placeholder="Re-enter new password" value={cnf} onChange={e => { setCnf(e.target.value); setErr(''); }} style={fieldStyle} />
-            <button type="button" onClick={() => setShowCnf(v => !v)} style={toggleStyle}>{showCnf ? '🙈' : '👁️'}</button>
-          </div>
-          {cnf && cnf === nw && <span style={{ fontSize:'0.78rem', color:'#22c55e', display:'block', marginBottom:'0.75rem' }}>✓ Passwords match</span>}
-          <div style={{ display:'flex', gap:'0.75rem', marginTop:'0.5rem' }}>
-            <button type="submit" disabled={loading} style={{ flex:1, background:'#6c63ff', color:'#fff', border:'none', borderRadius:8, padding:'0.65rem', fontWeight:700, cursor:'pointer', fontSize:'0.9rem' }}>
-              {loading ? 'Saving…' : 'Update Password'}
-            </button>
-            <button type="button" onClick={onClose} style={{ flex:1, background:'#f3f4f6', color:'#374151', border:'none', borderRadius:8, padding:'0.65rem', fontWeight:600, cursor:'pointer', fontSize:'0.9rem' }}>
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-/* ────────────────────────────────────────────────────────────────────────── */
-
 const EMPTY_SECTION = { data: [], loading: true };
 
 export default function App() {
@@ -131,9 +51,6 @@ export default function App() {
   const [surprisePicks, setSurprisePicks] = useState({ data: [], loading: false });
   const [activeMood,   setActiveMood]   = useState(null);
   const [moodPicks,    setMoodPicks]    = useState({ data: [], loading: false });
-
-  // ── Change-password modal (triggered from Profile) ─────────────────────
-  const [showChangePwModal, setShowChangePwModal] = useState(false);
 
   // ── Checkout / Orders / Flash-Sales state ─────────────────────────────
   const [showCheckout,   setShowCheckout]   = useState(false);
@@ -467,7 +384,6 @@ export default function App() {
         wishlistCount={wishlist.data.length}
         cartCount={cart.data.length}
         ordersCount={orders.length}
-        onChangePw={() => setShowChangePwModal(true)}
       />
 
       {!searchActive && activeTab === 'home' && <Hero userName={user.user_name} stats={heroStats} loyaltyPoints={loyaltyPoints} />}
@@ -821,7 +737,6 @@ export default function App() {
             purchases={cart.data}
             loyaltyPoints={loyaltyPoints}
             showToast={showToast}
-            onChangePassword={() => setShowChangePwModal(true)}
           />
         ) : null}
       </main>
@@ -898,9 +813,6 @@ export default function App() {
       )}
 
       <ToastContainer toasts={toasts} />
-
-      {/* ── Change Password Modal (accessible from Navbar & Profile) ── */}
-      {showChangePwModal && <ChangePwModal onClose={() => setShowChangePwModal(false)} showToast={showToast} />}
     </>
   );
 }
