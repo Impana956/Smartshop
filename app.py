@@ -70,7 +70,8 @@ app.secret_key = 'smartshop_ecommerce_secret_2024'
 
 _reset_tokens = {}   # token -> {user_id, email, expires}
 
-init_db()
+# Run DB init in background so Flask binds to port immediately (avoids Render timeout)
+threading.Thread(target=init_db, daemon=True).start()
 
 # ── Email helper ────────────────────────────────────────────────────────────
 def _resend_email(to_email, subject, html):
