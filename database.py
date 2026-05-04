@@ -41,12 +41,18 @@ class _PgCursor:
         return sql
 
     def execute(self, sql, params=()):
-        sql = self._adapt(sql)
-        self._cur.execute(sql, params)
-        try:
-            self.lastrowid = self._cur.fetchone()[0]
-        except Exception:
-            self.lastrowid = None
+        adapted = self._adapt(sql)
+        self._cur.execute(adapted, params)
+        self.lastrowid = None
+        if adapted.strip().upper().startswith('INSERT'):
+            try:
+                tmp = self._conn.cursor()
+                tmp.execute('SELECT lastval()')
+                row = tmp.fetchone()
+                self.lastrowid = row[0] if row else None
+                tmp.close()
+            except Exception:
+                self.lastrowid = None
         return self
 
     def executemany(self, sql, seq):
