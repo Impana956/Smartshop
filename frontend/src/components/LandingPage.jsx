@@ -85,11 +85,28 @@ export default function LandingPage({ onLogin }) {
     setForgotMsg(''); setForgotErr(''); setForgotOpen(true);
   };
 
-  const handleForgotStep1 = (e) => {
+  const handleForgotStep1 = async (e) => {
     e.preventDefault();
     if (!forgotEmail.includes('@')) { setForgotErr('Enter a valid email address.'); return; }
     setForgotErr('');
-    setForgotStep(2);
+    setForgotLoading(true);
+    try {
+      const res  = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setForgotStep(2);
+      } else {
+        setForgotErr(data.error);
+      }
+    } catch {
+      setForgotErr('Network error. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   const handleForgotStep2 = async (e) => {
@@ -467,9 +484,9 @@ export default function LandingPage({ onLogin }) {
                   value={forgotEmail} onChange={e => { setForgotEmail(e.target.value); setForgotErr(''); }}
                   style={{width:'100%',padding:'0.6rem 0.75rem',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:'0.9rem',boxSizing:'border-box',marginBottom:'1.1rem'}} />
                 <div style={{display:'flex',gap:'0.75rem'}}>
-                  <button type="submit"
-                    style={{flex:1,background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
-                    Continue →
+                  <button type="submit" disabled={forgotLoading}
+                    style={{flex:1,background:'#6c63ff',color:'#fff',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:700,cursor:'pointer',fontSize:'0.9rem',opacity:forgotLoading?0.7:1}}>
+                    {forgotLoading ? 'Checking…' : 'Continue →'}
                   </button>
                   <button type="button" onClick={() => setForgotOpen(false)}
                     style={{flex:1,background:'#f3f4f6',color:'#374151',border:'none',borderRadius:8,padding:'0.65rem',fontWeight:600,cursor:'pointer',fontSize:'0.9rem'}}>

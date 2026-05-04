@@ -28,6 +28,13 @@ import threading
 import urllib.request
 import urllib.error
 from email.mime.multipart import MIMEMultipart
+
+# Load .env file for local development
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from email.mime.text import MIMEText
 from functools import wraps
 from datetime import datetime, timedelta
@@ -380,6 +387,21 @@ def reset_password():
     return jsonify({'ok': True, 'message': 'Password updated! You can now sign in.'})
 
 
+@app.route('/api/check-email', methods=['POST'])
+def check_email():
+    """Check if an email is registered (used by forgot-password step 1)."""
+    data  = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip().lower()
+    if not email or '@' not in email:
+        return jsonify({'ok': False, 'error': 'Enter a valid email address.'})
+    db  = get_db()
+    row = db.execute('SELECT user_id FROM users WHERE email = ?', (email,)).fetchone()
+    db.close()
+    if not row:
+        return jsonify({'ok': False, 'error': 'No account found with that email address.'})
+    return jsonify({'ok': True})
+
+
 @app.route('/api/reset-password-direct', methods=['POST'])
 def reset_password_direct():
     """Reset password directly by email — no email link required."""
@@ -522,6 +544,22 @@ def interact():
         (user_id, product_id, action, rating, timestamp)
     )
     db.commit()
+
+    # Send cart confirmation email when a product is added to cart (purchase action)
+    if action == 'purchase' and EMAIL_ENABLED:
+        user_row = db.execute(
+            'SELECT name, email FROM users WHERE user_id = ?', (user_id,)
+        ).fetchone()
+        prod_row = db.execute(
+            'SELECT name, price, image FROM products WHERE product_id = ?', (product_id,)
+        ).fetchone()
+        if user_row and user_row['email'] and prod_row:
+            threading.Thread(
+                target=_send_cart_email,
+                args=(user_row['email'], user_row['name'],
+                      prod_row['name'], prod_row['price'], prod_row['image']),
+                daemon=True
+            ).start()
 
     db.close()
     return jsonify({'success': True, 'message': f'Action "{action}" recorded'})
