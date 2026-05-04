@@ -2,7 +2,6 @@ Flask==3.0.3
 gunicorn==21.2.0
 Werkzeug==3.0.3
 python-dotenv==1.0.1
-psycopg2-binary==2.9.9
 # razorpay>=2.0.0  # not needed — using dummy payment simulation
 # Optional: enable Stripe by installing and setting STRIPE_SECRET_KEY in app.py
 # stripe

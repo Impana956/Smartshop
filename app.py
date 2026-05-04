@@ -70,8 +70,7 @@ app.secret_key = 'smartshop_ecommerce_secret_2024'
 
 _reset_tokens = {}   # token -> {user_id, email, expires}
 
-# Run DB init in background so Flask binds to port immediately (avoids Render timeout)
-threading.Thread(target=init_db, daemon=True).start()
+init_db()
 
 # ── Email helper ────────────────────────────────────────────────────────────
 def _resend_email(to_email, subject, html):
@@ -284,7 +283,7 @@ def api_register():
         db.close()
         return jsonify({'ok': False, 'error': 'An account with that email already exists.'})
     pw_hash = generate_password_hash(password)
-    cursor  = db.execute('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
+    cursor  = db.execute('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?) RETURNING user_id',
                          (name, email, pw_hash))
     db.commit()
     new_id = cursor.lastrowid
@@ -888,7 +887,7 @@ def place_order():
         '''INSERT INTO orders
              (user_id, status, total, discount, coupon_code, address,
               payment_method, payment_id, created_at, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?)''',
+           VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING order_id''',
         (user_id, 'placed', total, discount, coupon_code, address,
          method, payment_id, now_str, now_str)
     )
