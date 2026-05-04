@@ -324,8 +324,10 @@ def init_db():
         except Exception:
             pass
 
-    conn.execute("UPDATE products SET stock = (ABS(RANDOM()) %% 91 + 10) WHERE stock IS NULL" if USE_POSTGRES
-                 else "UPDATE products SET stock = (ABS(RANDOM()) % 91 + 10) WHERE stock IS NULL")
+    if USE_POSTGRES:
+        conn.execute("UPDATE products SET stock = (FLOOR(RANDOM() * 91) + 10)::INTEGER WHERE stock IS NULL")
+    else:
+        conn.execute("UPDATE products SET stock = (ABS(RANDOM()) % 91 + 10) WHERE stock IS NULL")
     conn.commit()
 
     # ── Seed coupons (once) ────────────────────────────────────────────────
